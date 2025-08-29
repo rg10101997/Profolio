@@ -21,99 +21,12 @@ input,textarea,select{width:100%;padding:6px;background:#0b1020;border:1px solid
 .threat{margin:5px 0}
 .list .item{background:#1e293b;padding:8px;margin:6px 0;border-radius:6px;cursor:pointer}
 .risk-low{color:#22c55e}.risk-med{color:#f59e0b}.risk-high{color:#ef4444}
-</style>
-</head>
-<body>
-<header>🛰️ Intelligence Data Analyst • Demo</header>
-<div class="layout">
-<aside>
-<h3>Add / Update Location</h3>
-<form id="locationForm">
-<label>Name <input id="name" required></label>
-<label>Latitude <input id="lat" type="number" step="any" required></label>
-<label>Longitude <input id="lng" type="number" step="any" required></label>
-<div class="threat">
-<label>Crime <input type="range" id="crime" min="0" max="10" value="0"></label>
-</div>
-<div class="threat">
-<label>Terrorism <input type="range" id="terror" min="0" max="10" value="0"></label>
-</div>
-<div class="threat">
-<label>Cyber <input type="range" id="cyber" min="0" max="10" value="0"></label>
-</div>
-<button type="submit">Add / Update</button>
-</form>
-<h3>Locations</h3>
-<div class="list" id="locationList"></div>
-</aside>
-<main>
-<div id="map"></div>
-<div class="cards">
-<div class="card"><h4>Threat Breakdown</h4><canvas id="pieChart"></canvas></div>
-<div class="card"><h4>Total Locations</h4><div id="totalCount">0</div></div>
-<div class="card"><h4>High Risk</h4><div id="highCount">0</div></div>
-</div>
-</main>
-</div>
-
-<script>
-let map = L.map('map').setView([20,0],2);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap'
-}).addTo(map);
-
-let locations=[];
-let markers={};
-let pieChart=new Chart(document.getElementById('pieChart'),{
- type:'pie',
- data:{labels:['Crime','Terrorism','Cyber'],datasets:[{data:[0,0,0],backgroundColor:['#ef4444','#f59e0b','#3b82f6']}]},
- options:{plugins:{legend:{labels:{color:'#eee'}}}}
-});
-
-function riskLevel(score){
- if(score<10) return 'low';
- if(score<20) return 'med';
- return 'high';
-}
-
-function updateUI(){
- document.getElementById('locationList').innerHTML='';
- let totals=[0,0,0];
- let high=0;
- locations.forEach(loc=>{
-   totals[0]+=loc.crime;
-   totals[1]+=loc.terror;
-   totals[2]+=loc.cyber;
-   if(loc.score>=20) high++;
-   let div=document.createElement('div');
-   div.className='item risk-'+riskLevel(loc.score);
-   div.textContent=`${loc.name} (Risk ${loc.score})`;
-   div.onclick=()=>map.setView([loc.lat,loc.lng],8);
-   document.getElementById('locationList').appendChild(div);
- });
- pieChart.data.datasets[0].data=totals;
- pieChart.update();
- document.getElementById('totalCount').textContent=locations.length;
- document.getElementById('highCount').textContent=high;
-}
-
-document.getElementById('locationForm').onsubmit=e=>{
- e.preventDefault();
- let loc={
-   name:document.getElementById('name').value,
-   lat:+document.getElementById('lat').value,
-   lng:+document.getElementById('lng').value,
-   crime:+document.getElementById('crime').value,
-   terror:+document.getElementById('terror').value,
-   cyber:+document.getElementById('cyber').value
- };
- loc.score=loc.crime+loc.terror+loc.cyber;
- locations.push(loc);
- if(markers[loc.name]) map.removeLayer(markers[loc.name]);
- markers[loc.name]=L.marker([loc.lat,loc.lng]).addTo(map).bindPopup(`<b>${loc.name}</b><br>Risk: ${loc.score}`);
- updateUI();
- e.target.reset();
-};
-</script>
-</body>
-</html>
+.tabs{display:flex;margin-bottom:10px;}
+.tab-btn{flex:1;padding:8px;background:#1e293b;border:none;color:#eee;cursor:pointer;}
+.tab-btn.active{background:#3b82f6;color:#fff;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.csv-preview{background:#1e293b;color:#eee;padding:8px;margin-top:10px;border-radius:6px;max-height:180px;overflow:auto;font-size:13px;}
+.csv-preview table{width:100%;border-collapse:collapse;}
+.csv-preview th,.csv-preview td{border:1px solid #334155;padding:4px;}
+.csv-preview th{background:#334155;}
