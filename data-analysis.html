@@ -6,27 +6,116 @@
 <title>Intelligence Data Analyst – Demo</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{margin:0;font-family:sans-serif;background:#0b0f14;color:#eee;display:flex;flex-direction:column;height:100vh}
-header{padding:10px;background:#111827;color:#fff;font-weight:bold}
-.layout{flex:1;display:grid;grid-template-columns:320px 1fr}
-aside{background:#0f172a;border-right:1px solid #1f2937;overflow:auto;padding:10px}
-main{display:grid;grid-template-rows:1fr 260px}
-#map{height:100%;width:100%}
-.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:#111827;padding:10px}
-.card{background:#1e293b;padding:10px;border-radius:8px}
-label{display:block;margin-top:6px;font-size:12px}
-input,textarea,select{width:100%;padding:6px;background:#0b1020;border:1px solid #202a3a;color:#eee;border-radius:6px}
-.threat{margin:5px 0}
-.list .item{background:#1e293b;padding:8px;margin:6px 0;border-radius:6px;cursor:pointer}
-.risk-low{color:#22c55e}.risk-med{color:#f59e0b}.risk-high{color:#ef4444}
-.tabs{display:flex;margin-bottom:10px;}
-.tab-btn{flex:1;padding:8px;background:#1e293b;border:none;color:#eee;cursor:pointer;}
-.tab-btn.active{background:#3b82f6;color:#fff;}
-.tab-content{display:none;}
-.tab-content.active{display:block;}
-.csv-preview{background:#1e293b;color:#eee;padding:8px;margin-top:10px;border-radius:6px;max-height:180px;overflow:auto;font-size:13px;}
-.csv-preview table{width:100%;border-collapse:collapse;}
-.csv-preview th,.csv-preview td{border:1px solid #334155;padding:4px;}
-.csv-preview th{background:#334155;}
+body{margin:0;font-family:sans-serif;background:#0b0f14;color:#e5e7eb;display:flex;flex-direction:column;height:100vh}
+header{padding:10px;background:#111827;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.layout{flex:1;display:grid;grid-template-columns:300px 1fr}
+aside{background:#1f2937;overflow:auto;padding:10px}
+main{display:flex;flex-direction:column}
+#map{flex:1}
+#chartContainer{height:250px;background:#111827;padding:10px}
+label{display:block;margin:6px 0;font-size:14px}
+input[type="text"],input[type="number"]{width:100%;padding:6px;border-radius:6px;border:1px solid #374151;background:#0f172a;color:#fff}
+input[type="range"]{width:100%}
+button{margin-top:8px;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;background:#38bdf8;color:#000;font-weight:bold}
+.list-item{padding:8px;margin:6px 0;background:#0f172a;border-radius:6px;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h2>🛰️ Intelligence Data Analyst Demo</h2>
+</header>
+
+<div class="layout">
+  <aside>
+    <h3>Add Location</h3>
+    <form id="locationForm">
+      <label>Name <input type="text" id="locName" required></label>
+      <label>Latitude <input type="number" id="lat" step="any" required></label>
+      <label>Longitude <input type="number" id="lng" step="any" required></label>
+      <label>Terror Threat <input type="range" id="terror" min="0" max="10" value="5"></label>
+      <label>Crime Threat <input type="range" id="crime" min="0" max="10" value="5"></label>
+      <label>Political Instability <input type="range" id="political" min="0" max="10" value="5"></label>
+      <button type="submit">Add / Update</button>
+    </form>
+    <h3>Locations</h3>
+    <div id="locationList"></div>
+  </aside>
+
+  <main>
+    <div id="map"></div>
+    <div id="chartContainer">
+      <canvas id="threatChart"></canvas>
+    </div>
+  </main>
+</div>
+
+<script>
+const map = L.map('map').setView([20,0],2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+let locations = [];
+let markers = {};
+let chart;
+
+function updateChart(){
+  const totals = {terror:0,crime:0,political:0};
+  locations.forEach(l=>{
+    totals.terror += l.terror;
+    totals.crime += l.crime;
+    totals.political += l.political;
+  });
+  const data=[totals.terror,totals.crime,totals.political];
+  if(chart){ chart.data.datasets[0].data=data; chart.update(); }
+  else{
+    chart=new Chart(document.getElementById('threatChart'),{
+      type:'pie',
+      data:{labels:['Terror','Crime','Political'],
+            datasets:[{data,backgroundColor:['#ef4444','#f59e0b','#38bdf8']}]}
+    });
+  }
+}
+
+function addLocation(loc){
+  locations.push(loc);
+  const risk=(loc.terror+loc.crime+loc.political)/3;
+  let color=risk>7?'red':risk>4?'orange':'green';
+  const marker=L.circleMarker([loc.lat,loc.lng],{radius:8,color,fillColor:color,fillOpacity:0.8})
+    .bindPopup(`<b>${loc.name}</b><br>Terror:${loc.terror}<br>Crime:${loc.crime}<br>Political:${loc.political}<br>Risk:${risk.toFixed(1)}`);
+  marker.addTo(map);
+  markers[loc.name]=marker;
+  renderList();
+  updateChart();
+}
+
+function renderList(){
+  const list=document.getElementById('locationList');
+  list.innerHTML='';
+  locations.forEach(loc=>{
+    const div=document.createElement('div');
+    div.className='list-item';
+    div.innerText=`${loc.name} (Risk: ${((loc.terror+loc.crime+loc.political)/3).toFixed(1)})`;
+    div.onclick=()=>{map.setView([loc.lat,loc.lng],6); markers[loc.name].openPopup();};
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('locationForm').onsubmit=(e)=>{
+  e.preventDefault();
+  const loc={
+    name:document.getElementById('locName').value,
+    lat:parseFloat(document.getElementById('lat').value),
+    lng:parseFloat(document.getElementById('lng').value),
+    terror:+document.getElementById('terror').value,
+    crime:+document.getElementById('crime').value,
+    political:+document.getElementById('political').value
+  };
+  addLocation(loc);
+  e.target.reset();
+}
+</script>
+</body>
+</html>
